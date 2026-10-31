@@ -1,0 +1,42 @@
+name: Sync JS8Call Bitbucket Repo
+
+on:
+  schedule:
+    - cron: '0 */4 * * *' # runs every 4 hours
+  workflow_dispatch:  # enables manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout GitHub repo
+      uses: actions/checkout@v3
+      with:
+        ref: main
+
+    - name: Backup .github directory
+      run: |
+          cp .github/workflows/sync-repo.yml /tmp
+
+    - name: Set up Git
+      run: |
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'actions@github.com'
+
+    - name: Mirror Bitbucket repository
+      run: |
+        git remote add bitbucket https://widefido@bitbucket.org/widefido/js8call.git
+        git fetch bitbucket
+        git reset --hard bitbucket/js8call
+
+    - name: Restore and merge .github directory
+      run: |
+        mkdir -p .github/workflows
+        cp /tmp/sync-repo.yml .github/workflows
+        git add .github/workflows/sync-repo.yml
+        git commit -m "Restore .github directory" || echo "Nothing to commit"
+
+    - name: Push changes to GitHub
+      run: |
+        git push origin main --force
